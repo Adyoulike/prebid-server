@@ -14,16 +14,16 @@ import (
 )
 
 func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters.Bidder, error) {
-	return &AdYouLikeAdapter{
+	return &adapter{
 		endpoint: config.Endpoint,
 	}, nil
 }
 
-type AdYouLikeAdapter struct {
+type adapter struct {
 	endpoint string
 }
 
-func (adapter *AdYouLikeAdapter) MakeRequests(
+func (a *adapter) MakeRequests(
 	openRTBRequest *openrtb.BidRequest,
 	reqInfo *adapters.ExtraRequestInfo,
 ) (
@@ -32,23 +32,6 @@ func (adapter *AdYouLikeAdapter) MakeRequests(
 ) {
 	var err error
 	var tagID string
-
-	if len(openRTBRequest.Imp) > 0 {
-		var imp = &openRTBRequest.Imp[0]
-		var bidderExt adapters.ExtImpBidder
-		if err := json.Unmarshal(imp.Ext, &bidderExt); err != nil {
-			errs = append(errs, newBadInputError(err.Error()))
-		}
-
-		var ttxExt openrtb_ext.ExtImpAdyoulike
-		if err := json.Unmarshal(bidderExt.Bidder, &ttxExt); err != nil {
-			errs = append(errs, newBadInputError(err.Error()))
-		}
-	}
-
-	if len(openRTBRequest.Imp) == 0 {
-		errs = append(errs, newBadInputError("No impression in the bid request"))
-	}
 
 	reqCopy := *openRTBRequest
 	reqCopy.Imp = []openrtb.Imp{}
@@ -80,7 +63,7 @@ func (adapter *AdYouLikeAdapter) MakeRequests(
 
 	requestToBidder := &adapters.RequestData{
 		Method:  "POST",
-		Uri:     adapter.endpoint,
+		Uri:     a.endpoint,
 		Body:    openRTBRequestJSON,
 		Headers: headers,
 	}
@@ -92,7 +75,7 @@ func (adapter *AdYouLikeAdapter) MakeRequests(
 const unexpectedStatusCodeFormat = "" +
 	"Unexpected status code: %d. Run with request.debug = 1 for more info"
 
-func (adapter *AdYouLikeAdapter) MakeBids(
+func (a *adapter) MakeBids(
 	openRTBRequest *openrtb.BidRequest,
 	requestToBidder *adapters.RequestData,
 	bidderRawResponse *adapters.ResponseData,
@@ -150,10 +133,4 @@ func getMediaTypeForImp(impID string, imps []openrtb.Imp) openrtb_ext.BidType {
 	}
 
 	return mediaType
-}
-
-func newBadInputError(message string) error {
-	return &errortypes.BadInput{
-		Message: message,
-	}
 }
